@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Masomo Landlord Payment System</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background:#f6f7fb; }
+    h2 { color:#2a7f62; }
+    input, select, button { margin:4px; padding:6px 10px; border-radius:4px; }
+    button { background:#2a7f62; color:#fff; border:none; cursor:pointer; }
+    .small { font-size:12px; color:#555; }
+    table { border-collapse: collapse; width:100%; margin-top:12px; }
+    th, td { border:1px solid #e6eef7; padding:6px; text-align:left; }
+    th { background:#f3f7fb; }
+    .msg { margin:8px 0; color:#2a7f62; font-weight:600; }
+  </style>
+</head>
+<body>
+  <div id="loginDiv">
+    <h2>Landlord Login</h2>
+    <input type="text" id="nationalId" placeholder="National ID">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <div id="loginMsg" style="color:red;"></div>
+  </div>
+
+  <div id="dashboardDiv" style="display:none;">
+    <h2>Welcome, <span id="landlordName"></span></h2>
+    <div>Your Credits: <span id="landlordCredits" style="color:red; font-weight:bold;"></span></div>
+    <div>Select Plot:
+      <select id="plotSelect" onchange="loadTenants()">
+        <option value="">--select plot--</option>
+      </select>
+    </div>
+
+    <div id="tenantsContainer"></div>
+    <div id="waitMsg" class="msg" style="display:none;">Processing…</div>
+  </div>
+
+<script>
+const WORKER_URL = "https://weathered-fog-adf1.ev-dmaundu.workers.dev/";
+let currentNationalId = "";
+
+function showWait(){ document.getElementById("waitMsg").style.display="block"; }
+function hideWait(){ document.getElementById("waitMsg").style.display="none"; }
+
+async function apiCall(action, payload) {
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, payload })
+    });
+    return await res.json();
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+}
+
+async function login() {
+  const nid = document.getElementById("nationalId").value.trim();
+  const pwd = document.getElementById("password").value;
+  document.getElementById("loginMsg").innerText = "";
+  if(!nid||!pwd){ document.getElementById("loginMsg").innerText="Enter ID & Password"; return; }
+  showWait();
+  const res = await apiCall("login", { nationalId: nid, password: pwd });
+  hideWait();
+  if(res.success){
+    currentNationalId = res.nationalId;
+    document.getElementById("loginDiv").style.display="none";
+    document.getElementById("dashboardDiv").style.display="block";
+    document.getElementById("landlordName").innerText = res.name;
+    document.getElementById("landlordCredits").innerText = res.credits;
+    loadPlots();
+  } else {
+    document.getElementById("loginMsg").innerText = res.message;
+  }
+}
+
+async function loadPlots() {
+  showWait();
+  const plots = await apiCall("getPlots", { nationalId: currentNationalId });
+  hideWait();
+  const sel=document.getElementById("plotSelect");
+  sel.innerHTML="<option value=''>--select plot--</option>";
+  plots.forEach(p=>{
+    const opt=document.createElement("option");
+    opt.value=p.plotId;
+    opt.textContent=p.plotName+" ("+p.location+")";
+    sel.appendChild(opt);
+  });
+}
+
+async function loadTenants() {
+  const plotId=document.getElementById("plotSelect").value;
+  const container=document.getElementById("tenantsContainer");
+  container.innerHTML="";
+  if(!plotId) return;
+  showWait();
+  const tenants = await apiCall("getTenants", { plotId });
+  hideWait();
+  if(!tenants || tenants.length===0){ container.innerHTML="<div>No tenants found.</div>"; return; }
+  let html="<table><thead><tr><th>Tenant</th><th>Phone</th><th>Rent</th><th>Payment Status</th><th>Month-Year</th><th>Action</th></tr></thead><tbody>";
+  tenants.forEach(t=>{
+    html+="<tr>";
+    html+="<td>"+t.name+"</td>";
+    html+="<td>0"+t.phone+"</td>";
+    html+="<td>"+t.rent+"</td>";
+    let statusColor = "black";
+    if(t.paymentStatus === "Paid") statusColor = "green";
+    else if(t.paymentStatus === "Pending") statusColor = "red";
+    html += `<td style="color:${statusColor}; font-weight:bold;">${t.paymentStatus}</td>`;
+    const disabledSelect = t.paymentStatus === "Paid" ? "disabled" : "";
+    html += `<td><select id='monthYear-${t.tenantId}' ${disabledSelect}>${generateMonthYearOptions()}</select></td>`;
+    const disabledBtn = t.paymentStatus === "Paid" ? "disabled" : "";
+    html += `<td><button onclick='receivePayment("${t.tenantId}")' ${disabledBtn}>Receive Payment</button></td>`;
+    html+="</tr>";
+  });
+  html+="</tbody></table>";
+  container.innerHTML=html;
+}
+
+function generateMonthYearOptions(){
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const today=new Date();
+  let options="";
+  for(let y=today.getFullYear(); y>=today.getFullYear()-1; y--){
+    for(let m=0;m<12;m++){
+      options+="<option>"+months[m]+"-"+y+"</option>";
+    }
+  }
+  return options;
+}
+
+async function receivePayment(tenantId){
+  const sel=document.getElementById("monthYear-"+tenantId);
+  if(!sel) return alert("Select Month-Year");
+  const monthYear=sel.value;
+  showWait();
+  const res = await apiCall("receivePayment", { tenantId, monthYear, landlordNationalId: currentNationalId });
+  hideWait();
+  alert(res.message);
+  loadTenants();
+}
+</script>
+</body>
+</html>
