@@ -15,7 +15,7 @@
     table { border-collapse: collapse; width:100%; margin-top:12px; min-width:600px; }
     th, td { border:1px solid #e6eef7; padding:6px; text-align:left; }
     th { background:#f3f7fb; }
-    .msg { margin:8px 0; color:#2a7f62; font-weight:600; }
+    .msg { margin:12px 0; color:#2a7f62; font-weight:600; text-align:center; }
     .scroll-container { overflow-x:auto; }
     /* Center login box */
     #loginDiv {
@@ -50,25 +50,33 @@
     <div class="scroll-container">
       <div id="tenantsContainer"></div>
     </div>
-    <div id="waitMsg" class="msg" style="display:none;">Processing…</div>
   </div>
+
+  <!-- Global Processing Message -->
+  <div id="waitMsg" class="msg" style="display:none;">Please wait...</div>
 
 <script>
 const WORKER_URL = "https://weathered-fog-adf1.ev-dmaundu.workers.dev/";
 let currentNationalId = "";
 
-function showWait(){ document.getElementById("waitMsg").style.display="block"; }
+function showWait(msg="Please wait..."){ 
+  document.getElementById("waitMsg").innerText = msg;
+  document.getElementById("waitMsg").style.display="block"; 
+}
 function hideWait(){ document.getElementById("waitMsg").style.display="none"; }
 
-async function apiCall(action, payload) {
+async function apiCall(action, payload, waitMessage="Please wait...") {
   try {
+    showWait(waitMessage);
     const res = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, payload })
     });
+    hideWait();
     return await res.json();
   } catch (err) {
+    hideWait();
     return { success: false, message: err.message };
   }
 }
@@ -78,9 +86,7 @@ async function login() {
   const pwd = document.getElementById("password").value;
   document.getElementById("loginMsg").innerText = "";
   if(!nid||!pwd){ document.getElementById("loginMsg").innerText="Enter ID & Password"; return; }
-  showWait();
-  const res = await apiCall("login", { nationalId: nid, password: pwd });
-  hideWait();
+  const res = await apiCall("login", { nationalId: nid, password: pwd }, "Logging in...");
   if(res.success){
     currentNationalId = res.nationalId;
     document.getElementById("loginDiv").style.display="none";
@@ -94,9 +100,7 @@ async function login() {
 }
 
 async function loadPlots() {
-  showWait();
-  const plots = await apiCall("getPlots", { nationalId: currentNationalId });
-  hideWait();
+  const plots = await apiCall("getPlots", { nationalId: currentNationalId }, "Loading plots...");
   const sel=document.getElementById("plotSelect");
   sel.innerHTML="<option value=''>--select plot--</option>";
   plots.forEach(p=>{
@@ -112,9 +116,7 @@ async function loadTenants() {
   const container=document.getElementById("tenantsContainer");
   container.innerHTML="";
   if(!plotId) return;
-  showWait();
-  const tenants = await apiCall("getTenants", { plotId });
-  hideWait();
+  const tenants = await apiCall("getTenants", { plotId }, "Loading tenants...");
   if(!tenants || tenants.length===0){ container.innerHTML="<div>No tenants found.</div>"; return; }
   let html="<table><thead><tr><th>Tenant</th><th>Phone</th><th>Rent</th><th>Payment Status</th><th>Month-Year</th><th>Action</th></tr></thead><tbody>";
   tenants.forEach(t=>{
@@ -152,9 +154,7 @@ async function receivePayment(tenantId){
   const sel=document.getElementById("monthYear-"+tenantId);
   if(!sel) return alert("Select Month-Year");
   const monthYear=sel.value;
-  showWait();
-  const res = await apiCall("receivePayment", { tenantId, monthYear, landlordNationalId: currentNationalId });
-  hideWait();
+  const res = await apiCall("receivePayment", { tenantId, monthYear, landlordNationalId: currentNationalId }, "Processing payment...");
   alert(res.message);
   loadTenants();
 }
