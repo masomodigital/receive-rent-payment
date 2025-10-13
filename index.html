@@ -35,6 +35,8 @@
     <input type="password" id="password" placeholder="Password">
     <button onclick="login()">Login</button>
     <div id="loginMsg" style="color:red; margin-top:8px;"></div>
+    <!-- Added wait message for login -->
+    <div id="loginWait" style="display:none; color:green; font-weight:bold; margin-top:8px;">Wait please...</div>
   </div>
 
   <div id="dashboardDiv" style="display:none;">
@@ -85,8 +87,15 @@ async function login() {
   const nid = document.getElementById("nationalId").value.trim();
   const pwd = document.getElementById("password").value;
   document.getElementById("loginMsg").innerText = "";
+  document.getElementById("loginWait").style.display = "none";
   if(!nid||!pwd){ document.getElementById("loginMsg").innerText="Enter ID & Password"; return; }
+  
+  // Show "Wait please..." in bold green during login
+  document.getElementById("loginWait").style.display = "block";
+
   const res = await apiCall("login", { nationalId: nid, password: pwd }, "Logging in...");
+  document.getElementById("loginWait").style.display = "none";
+  
   if(res.success){
     currentNationalId = res.nationalId;
     document.getElementById("loginDiv").style.display="none";
