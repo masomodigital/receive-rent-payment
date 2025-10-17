@@ -177,7 +177,6 @@ async function loadTenants() {
   container.innerHTML = html;
 }
 
-// Updated generateMonthYearOptions to pre-select a value if provided
 function generateMonthYearOptions(selectedValue = "") {
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const today = new Date();
@@ -187,7 +186,7 @@ function generateMonthYearOptions(selectedValue = "") {
     for (let m = 0; m < 12; m++) {
       const value = `${months[m]}-${y}`;
       const isSelected = value === selectedValue ? "selected" : "";
-      options += `<option ${isSelected}>${value}</option>`;
+      options += `<option value="${value}" ${isSelected}>${value}</option>`;
     }
   }
 
