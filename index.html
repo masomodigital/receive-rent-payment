@@ -26,31 +26,34 @@
       height:100vh;
     }
     #loginDiv input, #loginDiv button { width:250px; }
+
+    /* Hide text inside disabled selects */
+    select.disabled-hidden:disabled {
+      color: transparent;
+    }
   </style>
 </head>
 <body>
   <div id="loginDiv">
-    <!-- Add Font Awesome for icons (if not already included above) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- Rent Collection Features Section -->
-<div style="margin: 20px auto; max-width: 600px; padding: 20px; background: #ffffffcc; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-  <h3 style="color:#2a7f62; font-size: 20px; margin-bottom: 15px; text-align:center;">Rent Collection Dashboard</h3>
-  <ul style="list-style: none; padding-left: 0; color:#333; font-size: 16px; line-height: 1.8;">
-    <li><i class="fas fa-filter" style="color:#2a7f62; margin-right:8px;"></i> Filter and view <strong>plots/buildings</strong> you own</li>
-    <li><i class="fas fa-hand-holding-usd" style="color:#2a7f62; margin-right:8px;"></i> Receive <strong>rent payments</strong> securely</li>
-    <li><i class="fas fa-paper-plane" style="color:#2a7f62; margin-right:8px;"></i> Instantly send <strong>SMS confirmation</strong> to tenants</li>
-    <li><i class="fas fa-receipt" style="color:#2a7f62; margin-right:8px;"></i> Automatically update tenant <strong>status to Paid</strong></li>
-    <li><i class="fas fa-chart-line" style="color:#2a7f62; margin-right:8px;"></i> Get a <strong>clear overview</strong> of all payments</li>
-  </ul>
-</div>
+    <!-- Rent Collection Features Section -->
+    <div style="margin: 20px auto; max-width: 600px; padding: 20px; background: #ffffffcc; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+      <h3 style="color:#2a7f62; font-size: 20px; margin-bottom: 15px; text-align:center;">Rent Collection Dashboard</h3>
+      <ul style="list-style: none; padding-left: 0; color:#333; font-size: 16px; line-height: 1.8;">
+        <li><i class="fas fa-filter" style="color:#2a7f62; margin-right:8px;"></i> Filter and view <strong>plots/buildings</strong> you own</li>
+        <li><i class="fas fa-hand-holding-usd" style="color:#2a7f62; margin-right:8px;"></i> Receive <strong>rent payments</strong> securely</li>
+        <li><i class="fas fa-paper-plane" style="color:#2a7f62; margin-right:8px;"></i> Instantly send <strong>SMS confirmation</strong> to tenants</li>
+        <li><i class="fas fa-receipt" style="color:#2a7f62; margin-right:8px;"></i> Automatically update tenant <strong>status to Paid</strong></li>
+        <li><i class="fas fa-chart-line" style="color:#2a7f62; margin-right:8px;"></i> Get a <strong>clear overview</strong> of all payments</li>
+      </ul>
+    </div>
 
     <h2>Login to Receive Rent</h2>
     <input type="text" id="nationalId" placeholder="National ID OR User ID">
     <input type="password" id="password" placeholder="Password">
     <button onclick="login()">Login</button>
     <div id="loginMsg" style="color:red; margin-top:8px;"></div>
-    <!-- Added wait message for login -->
     <div id="loginWait" style="display:none; color:green; font-weight:bold; margin-top:8px;">Wait please...</div>
   </div>
 
@@ -69,7 +72,6 @@
     </div>
   </div>
 
-  <!-- Global Processing Message -->
   <div id="waitMsg" class="msg" style="display:none;">Please wait...</div>
 
 <script>
@@ -104,8 +106,6 @@ async function login() {
   document.getElementById("loginMsg").innerText = "";
   document.getElementById("loginWait").style.display = "none";
   if(!nid||!pwd){ document.getElementById("loginMsg").innerText="Enter ID & Password"; return; }
-  
-  // Show "Wait please..." in bold green during login
   document.getElementById("loginWait").style.display = "block";
 
   const res = await apiCall("login", { nationalId: nid, password: pwd }, "Logging in...");
@@ -161,8 +161,9 @@ async function loadTenants() {
     html += `<td style="color:${statusColor}; font-weight:bold;">${t.paymentStatus}</td>`;
 
     const disabledSelect = t.paymentStatus === "Paid" ? "disabled" : "";
+    const selectClass = t.paymentStatus === "Paid" ? "disabled-hidden" : "";
     html += `<td>
-      <select id='monthYear-${t.tenantId}' ${disabledSelect}>
+      <select id='monthYear-${t.tenantId}' class='${selectClass}' ${disabledSelect}>
         ${generateMonthYearOptions(t.paymentStatus === "Paid" ? t.paidMonthYear : "")}
       </select>
     </td>`;
@@ -192,7 +193,6 @@ function generateMonthYearOptions(selectedValue = "") {
 
   return options;
 }
-
 
 async function receivePayment(tenantId){
   const sel=document.getElementById("monthYear-"+tenantId);
