@@ -136,43 +136,64 @@ async function loadPlots() {
 }
 
 async function loadTenants() {
-  const plotId=document.getElementById("plotSelect").value;
-  const container=document.getElementById("tenantsContainer");
-  container.innerHTML="";
-  if(!plotId) return;
+  const plotId = document.getElementById("plotSelect").value;
+  const container = document.getElementById("tenantsContainer");
+  container.innerHTML = "";
+  if (!plotId) return;
+
   const tenants = await apiCall("getTenants", { plotId }, "Loading tenants...");
-  if(!tenants || tenants.length===0){ container.innerHTML="<div>No tenants found.</div>"; return; }
-  let html="<table><thead><tr><th>Tenant</th><th>Phone</th><th>Rent</th><th>Payment Status</th><th>Month-Year</th><th>Action</th></tr></thead><tbody>";
-  tenants.forEach(t=>{
-    html+="<tr>";
-    html+="<td>"+t.name+"</td>";
-    html+="<td>0"+t.phone+"</td>";
-    html+="<td>"+t.rent+"</td>";
+  if (!tenants || tenants.length === 0) {
+    container.innerHTML = "<div>No tenants found.</div>";
+    return;
+  }
+
+  let html = "<table><thead><tr><th>Tenant</th><th>Phone</th><th>Rent</th><th>Payment Status</th><th>Month-Year</th><th>Action</th></tr></thead><tbody>";
+  
+  tenants.forEach(t => {
+    html += "<tr>";
+    html += `<td>${t.name}</td>`;
+    html += `<td>0${t.phone}</td>`;
+    html += `<td>${t.rent}</td>`;
+
     let statusColor = "black";
-    if(t.paymentStatus === "Paid") statusColor = "green";
-    else if(t.paymentStatus === "Pending") statusColor = "red";
+    if (t.paymentStatus === "Paid") statusColor = "green";
+    else if (t.paymentStatus === "Pending") statusColor = "red";
     html += `<td style="color:${statusColor}; font-weight:bold;">${t.paymentStatus}</td>`;
+
     const disabledSelect = t.paymentStatus === "Paid" ? "disabled" : "";
-    html += `<td><select id='monthYear-${t.tenantId}' ${disabledSelect}>${generateMonthYearOptions()}</select></td>`;
+    html += `<td>
+      <select id='monthYear-${t.tenantId}' ${disabledSelect}>
+        ${generateMonthYearOptions(t.paymentStatus === "Paid" ? t.paidMonthYear : "")}
+      </select>
+    </td>`;
+
     const disabledBtn = t.paymentStatus === "Paid" ? "disabled" : "";
     html += `<td><button onclick='receivePayment("${t.tenantId}")' ${disabledBtn}>Receive Payment</button></td>`;
-    html+="</tr>";
+
+    html += "</tr>";
   });
-  html+="</tbody></table>";
-  container.innerHTML=html;
+
+  html += "</tbody></table>";
+  container.innerHTML = html;
 }
 
-function generateMonthYearOptions(){
-  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const today=new Date();
-  let options="";
-  for(let y=today.getFullYear(); y>=today.getFullYear()-1; y--){
-    for(let m=0;m<12;m++){
-      options+="<option>"+months[m]+"-"+y+"</option>";
+// Updated generateMonthYearOptions to pre-select a value if provided
+function generateMonthYearOptions(selectedValue = "") {
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const today = new Date();
+  let options = "";
+
+  for (let y = today.getFullYear(); y >= today.getFullYear() - 1; y--) {
+    for (let m = 0; m < 12; m++) {
+      const value = `${months[m]}-${y}`;
+      const isSelected = value === selectedValue ? "selected" : "";
+      options += `<option ${isSelected}>${value}</option>`;
     }
   }
+
   return options;
 }
+
 
 async function receivePayment(tenantId){
   const sel=document.getElementById("monthYear-"+tenantId);
